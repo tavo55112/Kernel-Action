@@ -9,7 +9,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Instalar Herramientas
+      - name: Instalar Dependencias
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bc libncurses5-dev libssl-dev bison flex libelf-dev gcc-aarch64-linux-gnu
@@ -18,27 +18,26 @@ jobs:
         run: |
           git clone --depth=1 -b lineage-21 https://github.com/gta7lite/android_kernel_samsung_mt6765.git mmp
 
-      - name: Configurar y Parchear OP
+      - name: Configurar y Parchear
         run: |
           cd mmp
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
           
-          # Encontrar el defconfig correcto automáticamente
-          CONF_FILE=$(find arch/arm64/configs/ -name "*gta7lite*" | head -n 1 | xargs basename)
-          make $CONF_FILE
+          # 1. Creamos un archivo limpio con tus extras
+          cat <<EOF > op.config
+          CONFIG_CFG80211=y
+          CONFIG_MAC80211=y
+          CONFIG_BT_HCIBTUSB=y
+          CONFIG_NAMESPACES=y
+          CONFIG_USER_NS=y
+          EOF
+
+          # 2. Usamos el script oficial para fusionar la config de tu captura
+          scripts/kconfig/merge_config.sh -m arch/arm64/configs/gta7lite_defconfig op.config
           
-          # --- INYECCIÓN DE SOPORTE ---
-          # Modo Monitor
-          echo "CONFIG_CFG80211=y" >> .config
-          echo "CONFIG_MAC80211=y" >> .config
-          # Bluetooth (hciconfig)
-          echo "CONFIG_BT_HCIBTUSB=y" >> .config
-          # Soporte Linux (Namespaces)
-          echo "CONFIG_NAMESPACES=y" >> .config
-          echo "CONFIG_USER_NS=y" >> .config
-          # Fix para evitar Exit Code 2 en MediaTek
-          echo "CONFIG_MTK_FTRACE=n" >> .config
+          # 3. Generamos el .config final basado en la fusion
+          make olddefconfig
 
       - name: Compilar
         run: |
@@ -50,6 +49,6 @@ jobs:
       - name: Subir Kernel
         uses: actions/upload-artifact@v4
         with:
-          name: Kernel-A7Lite-Completo
+          name: Kernel-A7Lite-OP
           path: mmp/arch/arm64/boot/Image.gz
           
