@@ -1,0 +1,38 @@
+name: Compilar Kernel OP
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preparar Codigo del Kernel
+        run: |
+          git clone --depth=1 -b master https://github.com/DevZillion/android_kernel_samsung_gta7litewifixx mmp
+
+      - name: Aplicar Parches OP
+        run: |
+          cd mmp
+          # Activar Modo Monitor, Bluetooth y Terminal Linux
+          scripts/config --file arch/arm64/configs/gta7lite_eur_open_defconfig --enable CONFIG_CFG80211
+          scripts/config --file arch/arm64/configs/gta7lite_eur_open_defconfig --enable CONFIG_MAC80211
+          scripts/config --file arch/arm64/configs/gta7lite_eur_open_defconfig --enable CONFIG_BT_HCIBTUSB
+          scripts/config --file arch/arm64/configs/gta7lite_eur_open_defconfig --enable CONFIG_NAMESPACES
+          scripts/config --file arch/arm64/configs/gta7lite_eur_open_defconfig --enable CONFIG_USER_NS
+          # Evitar errores de MediaTek
+          scripts/config --file arch/arm64/configs/gta7lite_eur_open_defconfig --disable CONFIG_MTK_FTRACE
+
+      - name: Mmp CI (Compilador)
+        uses: tavo55112/Kernel-Action-Mmp@master
+        with:
+          kernel-url: https://github.com/DevZillion/android_kernel_samsung_gta7litewifixx
+          kernel-dir: mmp
+          kernel-branch: master
+          config: gta7lite_eur_open_defconfig
+          arch: arm64
+          aosp-gcc: true
+          aosp-clang: true
+          
