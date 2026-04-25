@@ -18,7 +18,7 @@ jobs:
     - name: Mmp CI
       uses: ./
       with:
-          kernel-url: https://github.com/Fyj69/kernel_oneplus_sdm845
+          kernel-url: https://github.com/DevZillion/android_kernel_samsung_gta7litewifixx
           kernel-dir: mmp
           kernel-branch: oos/11.0
           config: sdm845-perf_defconfig
