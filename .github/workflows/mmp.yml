@@ -1,4 +1,4 @@
-name: Compilar Kernel Lineage 21 - Fix Sintaxis Final
+name: Compilar Kernel Lineage 21 - Fix Shebang Final
 on:
   workflow_dispatch:
 
@@ -13,22 +13,29 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bc libncurses5-dev libssl-dev bison flex libelf-dev gcc-aarch64-linux-gnu python3 2to3
-          # Engañamos al sistema para que encuentre python2
+          # Enlace simbólico para compatibilidad
           sudo ln -sf /usr/bin/python3 /usr/bin/python2
 
       - name: Clonar Kernel
         run: |
           git clone --depth=1 -b lineage-21 https://github.com/gta7lite/android_kernel_samsung_mt6765.git mmp
 
-      - name: Parchear Scripts de MediaTek (Fix cmp y print)
+      - name: Reparar Scripts de MediaTek (Fix Definitivo)
         run: |
           cd mmp
-          # 1. Convertir la sintaxis básica a Python 3
+          # 1. Convertimos el código a Python 3
           2to3 -w tools/dct/DrvGen.py || true
-          # 2. INYECTAR la función cmp que Python 3 eliminó
-          # Esto inserta la definición de cmp en la primera línea del archivo
-          sed -i '1i def cmp(a, b): return (a > b) - (a < b)' tools/dct/DrvGen.py
-          # 3. Hacer lo mismo con cualquier otro script de herramientas
+          
+          # 2. REPARACIÓN QUIRÚRGICA:
+          # Primero forzamos el encabezado de Python 3 en la línea 1
+          sed -i '1s|.*|#!/usr/bin/python3|' tools/dct/DrvGen.py
+          # Luego insertamos la función 'cmp' en la línea 2 para no romper el encabezado
+          sed -i '2i def cmp(a, b): return (a > b) - (a < b)' tools/dct/DrvGen.py
+          
+          # 3. Aplicamos permisos de ejecución
+          chmod +x tools/dct/DrvGen.py
+          
+          # 4. Convertimos el resto de herramientas
           find tools -name "*.py" -exec 2to3 -w {} + || true
 
       - name: Parchear Red (skbuff)
@@ -46,10 +53,10 @@ jobs:
           
           mkdir -p out
           
-          # Configuración Tab A7 Lite
+          # Configuración base
           make O=out gta7lite_defconfig
           
-          # Inyectar herramientas de Terminal (Monitor mode, Namespaces)
+          # Inyectar módulos para Terminal (Monitor Mode, etc)
           cat <<EOF >> out/.config
           CONFIG_CFG80211=y
           CONFIG_MAC80211=y
@@ -60,12 +67,12 @@ jobs:
           EOF
           
           make O=out olddefconfig
-          # Compilación con bypass de errores de coincidencia
+          # Compilación final
           make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- DTC_EXT=dtc CONFIG_NO_ERROR_ON_MISMATCH=y
 
       - name: Subir Kernel
         uses: actions/upload-artifact@v4
         with:
-          name: Kernel-A7Lite-Final-Fixed
+          name: Kernel-A7Lite-Final-Fixed-V2
           path: mmp/out/arch/arm64/boot/Image.gz
           
