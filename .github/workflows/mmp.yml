@@ -18,37 +18,37 @@ jobs:
         run: |
           git clone --depth=1 -b lineage-21 https://github.com/gta7lite/android_kernel_samsung_mt6765.git mmp
 
-      - name: Configurar y Parchear
+      - name: Parchear Conflictos de Red
+        run: |
+          cd mmp
+          # Este comando comenta la definición duplicada que vimos en tus capturas
+          sed -i 's/static inline unsigned int skb_frag_size/static inline __attribute__((unused)) unsigned int skb_frag_size/g' include/linux/skbuff.h
+          sed -i 's/static inline void skb_frag_size_set/static inline __attribute__((unused)) void skb_frag_size_set/g' include/linux/skbuff.h
+
+      - name: Configurar y Compilar OP
         run: |
           cd mmp
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
           
-          # 1. Creamos un archivo limpio con tus extras
-          cat <<EOF > op.config
+          make gta7lite_defconfig
+          
+          # Inyectamos tus funciones (Monitor, Linux, Bluetooth)
+          cat <<EOF >> .config
           CONFIG_CFG80211=y
           CONFIG_MAC80211=y
           CONFIG_BT_HCIBTUSB=y
           CONFIG_NAMESPACES=y
           CONFIG_USER_NS=y
+          CONFIG_MTK_FTRACE=n
           EOF
-
-          # 2. Usamos el script oficial para fusionar la config de tu captura
-          scripts/kconfig/merge_config.sh -m arch/arm64/configs/gta7lite_defconfig op.config
           
-          # 3. Generamos el .config final basado en la fusion
           make olddefconfig
-
-      - name: Compilar
-        run: |
-          cd mmp
-          export ARCH=arm64
-          export CROSS_COMPILE=aarch64-linux-gnu-
           make -j$(nproc)
 
       - name: Subir Kernel
         uses: actions/upload-artifact@v4
         with:
-          name: Kernel-A7Lite-OP
+          name: Kernel-A7Lite-Reparado
           path: mmp/arch/arm64/boot/Image.gz
           
