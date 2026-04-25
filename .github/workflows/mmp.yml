@@ -20,8 +20,8 @@ jobs:
       with:
           kernel-url: https://github.com/DevZillion/android_kernel_samsung_gta7litewifixx
           kernel-dir: mmp
-          kernel-branch: oos/11.0
-          config: sdm845-perf_defconfig
+          kernel-branch: master
+          config: gta7lite_eur_open_defconfig
           arch: arm64
           aosp-gcc: true
           aosp-clang: true
