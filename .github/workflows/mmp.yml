@@ -1,4 +1,4 @@
-name: Compilar Kernel Lineage 21 - Final OP
+name: Compilar Kernel Lineage 21 - Fix Definitivo
 on:
   workflow_dispatch:
 
@@ -6,47 +6,46 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout del código
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Instalar Herramientas de Compilación
+      - name: Preparar Entorno (El Engaño de Python)
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential bc libncurses5-dev libssl-dev bison flex libelf-dev gcc-aarch64-linux-gnu python3 python-is-python3 2to3
+          sudo apt-get install -y build-essential bc libncurses5-dev libssl-dev bison flex libelf-dev gcc-aarch64-linux-gnu python3 2to3
+          # CREAMOS EL COMANDO python2 PARA QUE EL SISTEMA NO SE DETENGA
+          sudo ln -sf /usr/bin/python3 /usr/bin/python2
 
-      - name: Clonar el Kernel
+      - name: Clonar Kernel
         run: |
           git clone --depth=1 -b lineage-21 https://github.com/gta7lite/android_kernel_samsung_mt6765.git mmp
 
-      - name: Modernizar Scripts de MediaTek (Fix Python 3)
+      - name: Modernizar Scripts de MediaTek
         run: |
           cd mmp
-          # Convertimos los scripts viejos para que funcionen con Python 3
-          # El "|| true" evita que el workflow se detenga si un archivo de test falla
+          # Convertimos el código viejo de MediaTek a Python 3 automáticamente
           2to3 -w tools/dct/DrvGen.py || true
           find tools -name "*.py" -exec 2to3 -w {} + || true
 
-      - name: Aplicar Parches Quirúrgicos (Red y Headers)
+      - name: Parchear Red (skbuff)
         run: |
           cd mmp
-          # Parche para evitar conflictos de tipos en skbuff.h (Red)
           sed -i 's/static inline unsigned int skb_frag_size/static inline __attribute__((unused)) unsigned int skb_frag_size/g' include/linux/skbuff.h
           sed -i 's/static inline void skb_frag_size_set/static inline __attribute__((unused)) void skb_frag_size_set/g' include/linux/skbuff.h
 
-      - name: Configurar y Compilar
+      - name: Configurar y Compilar OP
         run: |
           cd mmp
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
           export DTC_EXT=dtc
           
-          # Crear carpeta de salida
           mkdir -p out
           
-          # Configuración base para Tab A7 Lite
+          # Configuración para la Tab A7 Lite
           make O=out gta7lite_defconfig
           
-          # Inyectar funciones de Terminal OP (Monitor mode, Namespaces, etc.)
+          # Inyectar tus herramientas (Monitor, Namespaces, etc.)
           cat <<EOF >> out/.config
           CONFIG_CFG80211=y
           CONFIG_MAC80211=y
@@ -56,13 +55,13 @@ jobs:
           CONFIG_MTK_FTRACE=n
           EOF
           
-          # Aplicar cambios y compilar
           make O=out olddefconfig
+          # Compilación real
           make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- DTC_EXT=dtc CONFIG_NO_ERROR_ON_MISMATCH=y
 
-      - name: Subir Kernel Finalizado
+      - name: Subir Kernel
         uses: actions/upload-artifact@v4
         with:
-          name: Kernel-A7Lite-Final
+          name: Kernel-A7Lite-Final-Attempt
           path: mmp/out/arch/arm64/boot/Image.gz
           
