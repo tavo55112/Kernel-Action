@@ -9,19 +9,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Instalar Dependencias
+      - name: Instalar Dependencias y Fix Python
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential bc libncurses5-dev libssl-dev bison flex libelf-dev gcc-aarch64-linux-gnu
+          # Este es el parche para el error 127 que viste en el log
+          sudo apt-get install -y build-essential bc libncurses5-dev libssl-dev bison flex libelf-dev gcc-aarch64-linux-gnu python-is-python3
 
       - name: Clonar Kernel
         run: |
           git clone --depth=1 -b lineage-21 https://github.com/gta7lite/android_kernel_samsung_mt6765.git mmp
 
-      - name: Parchear Conflictos de Red
+      - name: Parchear Conflictos skbuff
         run: |
           cd mmp
-          # Este comando comenta la definición duplicada que vimos en tus capturas
+          # Seguimos usando el parche de red para evitar el "conflicting types"
           sed -i 's/static inline unsigned int skb_frag_size/static inline __attribute__((unused)) unsigned int skb_frag_size/g' include/linux/skbuff.h
           sed -i 's/static inline void skb_frag_size_set/static inline __attribute__((unused)) void skb_frag_size_set/g' include/linux/skbuff.h
 
@@ -33,7 +34,7 @@ jobs:
           
           make gta7lite_defconfig
           
-          # Inyectamos tus funciones (Monitor, Linux, Bluetooth)
+          # Tus funciones de Terminal OP (Linux, Monitor, BT)
           cat <<EOF >> .config
           CONFIG_CFG80211=y
           CONFIG_MAC80211=y
@@ -49,6 +50,6 @@ jobs:
       - name: Subir Kernel
         uses: actions/upload-artifact@v4
         with:
-          name: Kernel-A7Lite-Reparado
+          name: Kernel-A7Lite-OP-Final
           path: mmp/arch/arm64/boot/Image.gz
           
