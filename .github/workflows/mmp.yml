@@ -10,7 +10,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configurar y Compilar
-        uses: tavo55112/Kernel-Action-Mmp@master
+        uses: utsavbalaji/Kernel-Action-Mmp@master
         with:
           kernel-url: https://github.com/DevZillion/android_kernel_samsung_gta7litewifixx
           kernel-dir: mmp
