@@ -11,7 +11,7 @@ jobs:
     permissions:
       contents: write
 
-    steps:       - name: Configurar Kernel OP
+    steps: - name: Configurar Kernel OP
         run: |
           cd mmp
           # Habilitar Modo Monitor y Bluetooth
