@@ -11,7 +11,19 @@ jobs:
     permissions:
       contents: write
 
-    steps:
+    steps:       - name: Configurar Kernel OP
+        run: |
+          cd mmp
+          # Habilitar Modo Monitor y Bluetooth
+          scripts/config --file arch/arm64/configs/$KERNEL_CONFIG --enable CONFIG_CFG80211
+          scripts/config --file arch/arm64/configs/$KERNEL_CONFIG --enable CONFIG_MAC80211
+          scripts/config --file arch/arm64/configs/$KERNEL_CONFIG --enable CONFIG_BT_HCIBTUSB
+          # Habilitar funciones para Linux (Namespaces)
+          scripts/config --file arch/arm64/configs/$KERNEL_CONFIG --enable CONFIG_NAMESPACES
+          scripts/config --file arch/arm64/configs/$KERNEL_CONFIG --enable CONFIG_USER_NS
+          # Desactivar trazado de MediaTek para evitar errores
+          scripts/config --file arch/arm64/configs/$KERNEL_CONFIG --disable CONFIG_MTK_FTRACE
+
     - name: Checkout
       uses: actions/checkout@v6
 
