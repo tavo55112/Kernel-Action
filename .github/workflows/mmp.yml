@@ -14,18 +14,22 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential bc libncurses5-dev libssl-dev bison flex libelf-dev gcc-aarch64-linux-gnu
 
-      - name: Descargar Kernel (Rama Main)
+      - name: Descargar Kernel
         run: |
-          # Clonamos la rama 'main' que es la que aparece en tu captura
           git clone --depth=1 -b main https://github.com/DevZillion/android_kernel_samsung_gta7litewifixx.git mmp
 
-      - name: Configurar y Compilar
+      - name: Inyectar Modificaciones
         run: |
           cd mmp
-          # Habilitamos lo necesario para Monitor y Linux
-          scripts/config --file arch/arm64/configs/gta7lite_eur_open_defconfig --enable CONFIG_CFG80211
-          scripts/config --file arch/arm64/configs/gta7lite_eur_open_defconfig --enable CONFIG_NAMESPACES
-          
+          # Forzamos la configuración de Modo Monitor y Linux al final del archivo
+          echo "CONFIG_CFG80211=y" >> arch/arm64/configs/gta7lite_eur_open_defconfig
+          echo "CONFIG_MAC80211=y" >> arch/arm64/configs/gta7lite_eur_open_defconfig
+          echo "CONFIG_NAMESPACES=y" >> arch/arm64/configs/gta7lite_eur_open_defconfig
+          echo "CONFIG_USER_NS=y" >> arch/arm64/configs/gta7lite_eur_open_defconfig
+
+      - name: Compilar
+        run: |
+          cd mmp
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
           make gta7lite_eur_open_defconfig
