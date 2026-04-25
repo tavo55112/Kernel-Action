@@ -9,7 +9,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Instalar Dependencias
+      - name: Instalar Herramientas
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bc libncurses5-dev libssl-dev bison flex libelf-dev gcc-aarch64-linux-gnu
@@ -18,30 +18,38 @@ jobs:
         run: |
           git clone --depth=1 -b lineage-21 https://github.com/gta7lite/android_kernel_samsung_mt6765.git mmp
 
-      - name: Configurar y Compilar
+      - name: Configurar y Parchear OP
         run: |
           cd mmp
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
           
-          # Buscamos el archivo de configuración real para no adivinar el nombre
+          # Encontrar el defconfig correcto automáticamente
           CONF_FILE=$(find arch/arm64/configs/ -name "*gta7lite*" | head -n 1 | xargs basename)
-          echo "Usando configuración: $CONF_FILE"
-          
           make $CONF_FILE
           
-          # Inyectamos tus modificaciones de Modo Monitor y Linux
+          # --- INYECCIÓN DE SOPORTE ---
+          # Modo Monitor
           echo "CONFIG_CFG80211=y" >> .config
           echo "CONFIG_MAC80211=y" >> .config
+          # Bluetooth (hciconfig)
+          echo "CONFIG_BT_HCIBTUSB=y" >> .config
+          # Soporte Linux (Namespaces)
           echo "CONFIG_NAMESPACES=y" >> .config
           echo "CONFIG_USER_NS=y" >> .config
-          
-          # Compilación final
+          # Fix para evitar Exit Code 2 en MediaTek
+          echo "CONFIG_MTK_FTRACE=n" >> .config
+
+      - name: Compilar
+        run: |
+          cd mmp
+          export ARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-gnu-
           make -j$(nproc)
 
-      - name: Subir Resultado
+      - name: Subir Kernel
         uses: actions/upload-artifact@v4
         with:
-          name: Kernel-Final-A7
+          name: Kernel-A7Lite-Completo
           path: mmp/arch/arm64/boot/Image.gz
           
