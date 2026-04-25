@@ -1,4 +1,4 @@
-name: Compilar Kernel Lineage 21 - Fix Definitivo
+name: Compilar Kernel Lineage 21 - Fix Sintaxis Final
 on:
   workflow_dispatch:
 
@@ -9,22 +9,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Preparar Entorno (El Engaño de Python)
+      - name: Preparar Entorno
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bc libncurses5-dev libssl-dev bison flex libelf-dev gcc-aarch64-linux-gnu python3 2to3
-          # CREAMOS EL COMANDO python2 PARA QUE EL SISTEMA NO SE DETENGA
+          # Engañamos al sistema para que encuentre python2
           sudo ln -sf /usr/bin/python3 /usr/bin/python2
 
       - name: Clonar Kernel
         run: |
           git clone --depth=1 -b lineage-21 https://github.com/gta7lite/android_kernel_samsung_mt6765.git mmp
 
-      - name: Modernizar Scripts de MediaTek
+      - name: Parchear Scripts de MediaTek (Fix cmp y print)
         run: |
           cd mmp
-          # Convertimos el código viejo de MediaTek a Python 3 automáticamente
+          # 1. Convertir la sintaxis básica a Python 3
           2to3 -w tools/dct/DrvGen.py || true
+          # 2. INYECTAR la función cmp que Python 3 eliminó
+          # Esto inserta la definición de cmp en la primera línea del archivo
+          sed -i '1i def cmp(a, b): return (a > b) - (a < b)' tools/dct/DrvGen.py
+          # 3. Hacer lo mismo con cualquier otro script de herramientas
           find tools -name "*.py" -exec 2to3 -w {} + || true
 
       - name: Parchear Red (skbuff)
@@ -33,7 +37,7 @@ jobs:
           sed -i 's/static inline unsigned int skb_frag_size/static inline __attribute__((unused)) unsigned int skb_frag_size/g' include/linux/skbuff.h
           sed -i 's/static inline void skb_frag_size_set/static inline __attribute__((unused)) void skb_frag_size_set/g' include/linux/skbuff.h
 
-      - name: Configurar y Compilar OP
+      - name: Configurar y Compilar
         run: |
           cd mmp
           export ARCH=arm64
@@ -42,10 +46,10 @@ jobs:
           
           mkdir -p out
           
-          # Configuración para la Tab A7 Lite
+          # Configuración Tab A7 Lite
           make O=out gta7lite_defconfig
           
-          # Inyectar tus herramientas (Monitor, Namespaces, etc.)
+          # Inyectar herramientas de Terminal (Monitor mode, Namespaces)
           cat <<EOF >> out/.config
           CONFIG_CFG80211=y
           CONFIG_MAC80211=y
@@ -56,12 +60,12 @@ jobs:
           EOF
           
           make O=out olddefconfig
-          # Compilación real
+          # Compilación con bypass de errores de coincidencia
           make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- DTC_EXT=dtc CONFIG_NO_ERROR_ON_MISMATCH=y
 
       - name: Subir Kernel
         uses: actions/upload-artifact@v4
         with:
-          name: Kernel-A7Lite-Final-Attempt
+          name: Kernel-A7Lite-Final-Fixed
           path: mmp/out/arch/arm64/boot/Image.gz
           
