@@ -9,15 +9,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configurar y Compilar
-        uses: utsavbalaji/Kernel-Action-Mmp@master
-        with:
-          kernel-url: https://github.com/DevZillion/android_kernel_samsung_gta7litewifixx
-          kernel-dir: mmp
-          kernel-branch: master
-          config: gta7lite_eur_open_defconfig
-          arch: arm64
-          aosp-gcc: true
-          aosp-clang: true
-          ksu: true
+      - name: Instalar Herramientas
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc libncurses5-dev libssl-dev bison flex libelf-dev gcc-aarch64-linux-gnu
+
+      - name: Clonar Kernel Samsung
+        run: |
+          git clone --depth=1 -b master https://github.com/DevZillion/android_kernel_samsung_gta7litewifixx mmp
+
+      - name: Compilar Kernel
+        run: |
+          cd mmp
+          export ARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          make gta7lite_eur_open_defconfig
+          make -j$(nproc)
           
