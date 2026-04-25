@@ -9,20 +9,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Instalar Dependencias y Fix Python
+      - name: Instalar Dependencias y Forzar Python 2
         run: |
           sudo apt-get update
-          # Este es el parche para el error 127 que viste en el log
-          sudo apt-get install -y build-essential bc libncurses5-dev libssl-dev bison flex libelf-dev gcc-aarch64-linux-gnu python-is-python3
+          sudo apt-get install -y build-essential bc libncurses5-dev libssl-dev bison flex libelf-dev gcc-aarch64-linux-gnu python3
+          # ESTE ES EL TRUCO: Creamos el comando python2 manualmente
+          sudo ln -sf /usr/bin/python3 /usr/bin/python2
 
       - name: Clonar Kernel
         run: |
           git clone --depth=1 -b lineage-21 https://github.com/gta7lite/android_kernel_samsung_mt6765.git mmp
 
-      - name: Parchear Conflictos skbuff
+      - name: Parchear Conflictos de Red
         run: |
           cd mmp
-          # Seguimos usando el parche de red para evitar el "conflicting types"
+          # Seguimos usando el parche de skbuff para no retroceder
           sed -i 's/static inline unsigned int skb_frag_size/static inline __attribute__((unused)) unsigned int skb_frag_size/g' include/linux/skbuff.h
           sed -i 's/static inline void skb_frag_size_set/static inline __attribute__((unused)) void skb_frag_size_set/g' include/linux/skbuff.h
 
@@ -34,7 +35,7 @@ jobs:
           
           make gta7lite_defconfig
           
-          # Tus funciones de Terminal OP (Linux, Monitor, BT)
+          # Inyectamos tus funciones (Monitor, Linux, Bluetooth)
           cat <<EOF >> .config
           CONFIG_CFG80211=y
           CONFIG_MAC80211=y
@@ -50,6 +51,6 @@ jobs:
       - name: Subir Kernel
         uses: actions/upload-artifact@v4
         with:
-          name: Kernel-A7Lite-OP-Final
+          name: Kernel-A7Lite-OP
           path: mmp/arch/arm64/boot/Image.gz
           
